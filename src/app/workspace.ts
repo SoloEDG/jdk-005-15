@@ -4,6 +4,7 @@ import { createFields } from "../features/fields";
 import { createWarehouse } from "../features/warehouse";
 import { createWorkshop } from "../features/workshop";
 import { createOrders, salePrice } from "../features/orders";
+import { createContracts } from "../features/contracts";
 import { items } from "../shared/catalog";
 import { saveFarm, loadFarm } from "./persistence";
 export function createWorkspace() {
@@ -14,9 +15,47 @@ export function createWorkspace() {
   const clock = createClock();
   const warehouse = createWarehouse(() => clock.state.hour, notice);
   const orders = createOrders(warehouse, notice, clock.state.hour);
-  const fields = createFields(orders.spend, warehouse.add, notice);
+  const contracts = createContracts(
+    {
+      earn: orders.earn,
+      charge: orders.charge,
+      credit: orders.credit,
+      lockPlots: (ids, id) => fields.lockPlots(ids, id),
+      releasePlots: (id, onlyUnused) => fields.releasePlots(id, onlyUnused),
+      allPlantedWith: (id, crop) => fields.allPlantedWith(id, crop),
+      reserve: (owner, item, n, minQuality, contract) =>
+        warehouse.reserve(owner, item, n, minQuality, contract),
+      consume: warehouse.consume,
+      release: warehouse.release,
+      abortJobs: (id) => workshop.abortContract(id),
+    },
+    notice,
+  );
+  const fields = createFields(
+    orders.spend,
+    (item, n, q, contract) => {
+      warehouse.add(
+        item,
+        n,
+        q,
+        undefined,
+        contract ? "合同田收获" : undefined,
+        contract,
+      );
+      if (contract) contracts.inspect(contract, q, n);
+    },
+    notice,
+    {
+      contractCrop: (id) => contracts.cropOf(id),
+      onSow: (id) => contracts.onSow(id),
+    },
+  );
   const workshop = createWorkshop(
-    { ...warehouse, spend: orders.spend },
+    {
+      ...warehouse,
+      spend: orders.spend,
+      contractActive: (id) => contracts.isActive(id),
+    },
     notice,
   );
   const engine = createEngine(
@@ -27,6 +66,7 @@ export function createWorkspace() {
       fields.tick(t);
       workshop.tick(t.to);
       orders.tick(t.to);
+      contracts.tick(t.to);
     },
   );
   const snapshot = () => ({
@@ -35,6 +75,7 @@ export function createWorkspace() {
     fields: fields.snapshot(),
     workshop: workshop.snapshot(),
     orders: orders.snapshot(),
+    contracts: contracts.snapshot(),
   });
   return {
     clock,
@@ -42,6 +83,7 @@ export function createWorkspace() {
     fields,
     workshop,
     orders,
+    contracts,
     engine,
     notices,
     sell(id: string) {
@@ -71,6 +113,7 @@ export function createWorkspace() {
         fields.restore(data.fields);
         workshop.restore(data.workshop);
         orders.restore(data.orders);
+        if (data.contracts) contracts.restore(data.contracts);
         notice("已恢复保存时刻");
       } catch {
         notice("存档损坏，无法恢复");

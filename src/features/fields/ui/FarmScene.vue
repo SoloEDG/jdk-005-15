@@ -37,7 +37,10 @@ defineEmits<{ plot: [id: number] }>();
         v-for="plot in plots"
         :key="plot.id"
         class="plot"
-        :class="{ 'is-ready': plot.crop && ready(plot.crop) }"
+        :class="{
+          'is-ready': plot.crop && ready(plot.crop),
+          'is-locked': !!plot.contract,
+        }"
         :data-plot="plot.id"
         @click="$emit('plot', plot.id)"
       >
@@ -49,6 +52,7 @@ defineEmits<{ plot: [id: number] }>();
             growthStage(plot) === 1 ? "🌱" : items[plot.crop.item].icon
           }}</span><span v-else class="empty-plot">+</span
         ><b v-if="plot.crop && ready(plot.crop)" class="ready-mark">!</b
+        ><b v-if="plot.contract" class="lock-mark">契</b
         ><i
           v-if="plot.crop"
           class="water-meter"

@@ -5,17 +5,22 @@ import { FarmScene, FieldsPanel } from "../features/fields";
 import { WarehousePanel } from "../features/warehouse";
 import { WorkshopPanel } from "../features/workshop";
 import { OrdersPanel, EconomyPanel } from "../features/orders";
+import { ContractsPanel } from "../features/contracts";
 import { createWorkspace } from "./workspace";
 const farm = createWorkspace(),
   active = ref(0),
   tab = ref("warehouse");
-const { clock, warehouse, fields, workshop, orders, engine, notices } = farm;
+const { clock, warehouse, fields, workshop, orders, contracts, engine, notices } = farm;
 const timer = setInterval(() => {
   if (!clock.state.paused) engine.advance(1);
 }, 1500);
 onUnmounted(() => clearInterval(timer));
 function reset() {
   if (confirm("开始一座新农场？已保存的存档仍然保留。")) location.reload();
+}
+function breach(id: string) {
+  if (confirm("确定违约？需退回订金，已投入的种子与加工费不予退还。"))
+    contracts.breach(id);
 }
 </script>
 <template>
@@ -69,6 +74,7 @@ function reset() {
             :plots="fields.state.plots"
             :selected="fields.state.selected"
             :active="active"
+            :contracts="contracts.state.contracts"
             @select="fields.select"
             @plant="(id) => fields.plant(id, clock.state.hour)"
             @water="fields.water"
@@ -97,7 +103,12 @@ function reset() {
               :class="{ active: tab === 'orders' }"
               @click="tab = 'orders'"
             >
-              订单
+              订单</button
+            ><button
+              :class="{ active: tab === 'contracts' }"
+              @click="tab = 'contracts'"
+            >
+              合同
             </button>
           </div>
           <WarehousePanel
@@ -110,8 +121,9 @@ function reset() {
           /><WorkshopPanel
             v-if="tab === 'workshop'"
             :jobs="workshop.state.jobs"
+            :contracts="contracts.state.contracts"
             :hour="clock.state.hour"
-            @enqueue="(id) => workshop.enqueue(id, clock.state.hour)"
+            @enqueue="(id, contract) => workshop.enqueue(id, clock.state.hour, contract)"
             @claim="(id) => workshop.claim(id, clock.state.hour)"
           /><OrdersPanel
             v-if="tab === 'orders'"
@@ -120,6 +132,16 @@ function reset() {
             @reserve="orders.reserve"
             @deliver="(id) => orders.deliver(id, clock.state.hour)"
             @cancel="orders.cancel"
+          /><ContractsPanel
+            v-if="tab === 'contracts'"
+            :contracts="contracts.state.contracts"
+            :plots="fields.state.plots"
+            :hour="clock.state.hour"
+            @sign="(id, plots) => contracts.sign(id, plots, clock.state.hour)"
+            @reserve="contracts.reserve"
+            @unreserve="contracts.unreserve"
+            @deliver="(id) => contracts.deliver(id)"
+            @breach="breach"
           />
           <div class="tip-card">
             <span>✦ 今日小贴士</span>

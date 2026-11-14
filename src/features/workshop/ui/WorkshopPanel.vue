@@ -1,10 +1,23 @@
 <script setup lang="ts">
-import type { Job } from "../../../shared/contracts";
+import { computed } from "vue";
+import type { DeepReadonly } from "vue";
+import type { Contract, Job } from "../../../shared/contracts";
 import { items } from "../../../shared/catalog";
 import { recipes, recipeById } from "../lib/recipes";
 import { queueProgress } from "../lib/schedule";
-defineProps<{ jobs: readonly Readonly<Job>[]; hour: number }>();
-defineEmits<{ enqueue: [recipe: string]; claim: [id: string] }>();
+const props = defineProps<{
+  jobs: readonly Readonly<Job>[];
+  contracts: readonly DeepReadonly<Contract>[];
+  hour: number;
+}>();
+defineEmits<{ enqueue: [recipe: string, contract?: string]; claim: [id: string] }>();
+const dedicated = computed(() =>
+  props.contracts.filter(
+    (c) => c.status === "active" && recipes.some((r) => r.output === c.item),
+  ),
+);
+const recipesFor = (c: DeepReadonly<Contract>) =>
+  recipes.filter((r) => r.output === c.item);
 </script>
 <template>
   <section class="panel workshop-panel">
@@ -21,13 +34,28 @@ defineEmits<{ enqueue: [recipe: string]; claim: [id: string] }>();
         ><span>＋ 制作</span>
       </button>
     </div>
+    <div v-if="dedicated.length" class="dedicated">
+      <small>合同专作 · 只使用专供原料，成品保留合同归属</small>
+      <div v-for="c in dedicated" :key="c.id" class="dedicated-row">
+        <span
+          >📜 {{ c.id }} · 需 {{ items[c.item].name }} ×{{ c.quantity }}</span
+        ><button
+          v-for="r in recipesFor(c)"
+          :key="r.id"
+          @click="$emit('enqueue', r.id, c.id)"
+        >
+          ＋ {{ r.name }}
+        </button>
+      </div>
+    </div>
     <div
       v-for="job in jobs.filter((j) => j.status !== 'claimed')"
       :key="job.id"
       class="job-row"
     >
       <span
-        >{{ recipeById(job.recipe)?.name }} <small>{{ job.id }}</small></span
+        >{{ recipeById(job.recipe)?.name }} <small>{{ job.id }}</small
+        ><em v-if="job.contract" class="tag">📜 {{ job.contract }}</em></span
       ><template v-if="job.status === 'queued'"
         ><progress
           :value="

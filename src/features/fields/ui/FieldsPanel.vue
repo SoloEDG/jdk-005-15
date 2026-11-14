@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import type { Item, Plot } from "../../../shared/contracts";
+import { computed } from "vue";
+import type { DeepReadonly } from "vue";
+import type { Contract, Item, Plot } from "../../../shared/contracts";
 import { items } from "../../../shared/catalog";
 import { crops, ready } from "../lib/crops";
-defineProps<{
+const props = defineProps<{
   plots: readonly Readonly<Plot>[];
   selected: Item;
   active: number;
+  contracts: readonly DeepReadonly<Contract>[];
 }>();
 defineEmits<{
   select: [item: Item];
@@ -14,6 +17,10 @@ defineEmits<{
   harvest: [id: number];
 }>();
 const seeds: Item[] = ["carrot", "corn", "berry"];
+const bound = computed(() => {
+  const id = props.plots[props.active]?.contract;
+  return props.contracts.find((c) => c.id === id && c.status === "active");
+});
 </script>
 <template>
   <section class="panel seed-panel">
@@ -38,13 +45,21 @@ const seeds: Item[] = ["carrot", "corn", "berry"];
         ><span
           >生长 {{ plots[active]!.crop!.growth.toFixed(1) }} /
           {{ crops[plots[active]!.crop!.item]?.duration }}h · 水分
-          {{ plots[active]!.crop!.water }}%</span
+          {{ plots[active]!.crop!.water }}%
+          <em v-if="plots[active]!.contract" class="tag"
+            >📜 {{ plots[active]!.contract }}</em
+          ></span
         ><button @click="$emit('water', active)">浇水 +</button
         ><button
           :disabled="!ready(plots[active]!.crop!)"
           @click="$emit('harvest', active)"
         >
           收获作物
+        </button></template
+      ><template v-else-if="bound"
+        ><span>合同田块 · 按约种植 {{ items[bound.crop].name }}</span
+        ><button class="primary" @click="$emit('plant', active)">
+          播种 {{ items[bound.crop].name }}
         </button></template
       ><template v-else
         ><span>翻好的土地，等待新种子</span

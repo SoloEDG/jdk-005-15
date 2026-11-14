@@ -11,6 +11,7 @@ export interface Crop {
 export interface Plot {
   id: number;
   crop: Crop | null;
+  contract?: string | null;
 }
 export interface Receipt {
   quality: number;
@@ -24,6 +25,7 @@ export interface Batch {
   quality: number;
   source: string;
   expires: number;
+  contract?: string;
 }
 export interface Allocation {
   batch: string;
@@ -41,6 +43,7 @@ export interface Job {
   receipt?: Receipt;
   finish: number;
   status: "queued" | "ready" | "claimed" | "failed";
+  contract?: string;
 }
 export interface Order {
   id: string;
@@ -50,6 +53,28 @@ export interface Order {
   minQuality: number;
   deadline: number;
   status: "open" | "reserved" | "delivered" | "expired";
+  reservation?: string;
+}
+export interface Contract {
+  id: string;
+  item: Item;
+  crop: Item;
+  quantity: number;
+  cropNeed: number;
+  minQuality: number;
+  duration: number;
+  deadline: number;
+  plotCount: number;
+  plots: number[];
+  deposit: number;
+  paySow: number;
+  payHarvest: number;
+  payDeliver: number;
+  status: "offer" | "active" | "delivered" | "breached" | "expired";
+  sowPaid: boolean;
+  harvestPaid: boolean;
+  deliveryPaid: boolean;
+  qualified: number;
   reservation?: string;
 }
 export interface Tick {

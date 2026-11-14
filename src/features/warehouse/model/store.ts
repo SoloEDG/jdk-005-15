@@ -21,9 +21,10 @@ export function createWarehouse(now: () => number, notice: Notice) {
     q = 1,
     hour = now(),
     source = "田间收获",
+    contract?: string,
   ) => {
     state.batches.push(
-      makeBatch(item, n, q, hour, `b${++state.serial}`, source),
+      makeBatch(item, n, q, hour, `b${++state.serial}`, source, contract),
     );
   };
   add("carrot", 8, 2);
@@ -36,7 +37,7 @@ export function createWarehouse(now: () => number, notice: Notice) {
       const b = state.batches.find((b) => b.id === id);
       return b ? available(b, state.reservations) : 0;
     },
-    reserve(owner: string, item: Item, n: number, minQuality = 1) {
+    reserve(owner: string, item: Item, n: number, minQuality = 1, contract?: string) {
       const allocations = allocate(
         state.batches,
         state.reservations,
@@ -44,6 +45,7 @@ export function createWarehouse(now: () => number, notice: Notice) {
         n,
         now(),
         minQuality,
+        contract,
       );
       if (!allocations) return null;
       const id = `r${++state.serial}`;
@@ -79,7 +81,8 @@ export function createWarehouse(now: () => number, notice: Notice) {
     },
     sell(id: string, n: number) {
       const b = state.batches.find((b) => b.id === id);
-      if (!b || available(b, state.reservations) < n) return null;
+      if (!b || b.contract || available(b, state.reservations) < n)
+        return null;
       b.quantity -= n;
       if (!b.quantity) state.batches = state.batches.filter((b) => b.id !== id);
       return b.item;

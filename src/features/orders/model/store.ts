@@ -30,6 +30,13 @@ export function createOrders(ports: Ports, notice: Notice, hour: number) {
     earn: (n: number) => {
       state.coins += n;
     },
+    charge: (n: number) => {
+      state.coins = Math.max(0, state.coins - n);
+    },
+    credit: (xp: number) => {
+      state.xp += xp;
+      state.delivered++;
+    },
     reserve(id: string) {
       const o = state.orders.find((o) => o.id === id);
       if (!o || o.status !== "open") return;

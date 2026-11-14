@@ -21,7 +21,10 @@ defineEmits<{ sell: [id: string] }>();
         <div>
           <strong
             >{{ items[batch.item].name }}
-            <em>{{ "★".repeat(batch.quality) }}</em></strong
+            <em>{{ "★".repeat(batch.quality) }}</em
+            ><em v-if="batch.contract" class="tag"
+              >📜 {{ batch.contract }} 专供</em
+            ></strong
           ><small
             >{{ batch.id }} · {{ batch.source }} · {{ batch.expires - hour }}h
             后到期</small
@@ -31,12 +34,15 @@ defineEmits<{ sell: [id: string] }>();
           <strong>×{{ batch.quantity }}</strong
           ><small>可用 {{ free(batch.id) }}</small>
         </div>
-        <button :disabled="!free(batch.id)" @click="$emit('sell', batch.id)">
+        <button
+          :disabled="!free(batch.id) || !!batch.contract"
+          @click="$emit('sell', batch.id)"
+        >
           卖 1
         </button>
       </div>
       <p v-if="!batches.length" class="empty">谷仓空了，去田里收获吧。</p>
     </div>
-    <p class="hint">按先到期批次配货 · 已占用货物不可出售</p>
+    <p class="hint">按先到期批次配货 · 已占用货物不可出售 · 📜 合同专供不可出售</p>
   </section>
 </template>
